@@ -23,8 +23,8 @@ services:
     ports:
       - "8084:8084"
     environment:
-      - SPRING_REDIS_HOST=redis  # Connects to Redis container via network alias
-      - SPRING_REDIS_PORT=6379
+      - spring.redis.host=redis
+      - spring.redis.port=6379
     depends_on:
       - redis
     networks:
