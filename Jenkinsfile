@@ -30,7 +30,7 @@ pipeline {
         stage("Docker Compose Down") {
             steps {
                 dir(DEPLOY_DIR) {
-                    sh "docker-compose down || true"
+                    sh "docker compose down || true"
                 }
             }
         }
@@ -38,7 +38,7 @@ pipeline {
         stage("Docker Build") {
             steps {
                 dir(DEPLOY_DIR) {
-                    sh "docker-compose build --no-cache"
+                    sh "docker compose build --no-cache"
                 }
             }
         }
@@ -46,7 +46,7 @@ pipeline {
         stage("Docker Deploy") {
             steps {
                 dir(DEPLOY_DIR) {
-                    sh "docker-compose up -d"
+                    sh "docker compose up -d"
                 }
             }
         }
