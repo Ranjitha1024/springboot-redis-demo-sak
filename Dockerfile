@@ -5,7 +5,7 @@ FROM eclipse-temurin:17-jdk-alpine
 WORKDIR /app
 
 # Copy the correct jar file
-COPY target/springboot-redis-demo-1.0.0.jar app.jar
+COPY target/app.jar app.jar
 
 # Expose port
 EXPOSE 8084
