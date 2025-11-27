@@ -2,48 +2,62 @@ pipeline {
     agent any
 
     tools {
-        maven 'maven'  // Make sure this matches the Maven installation name in Jenkins
+        maven 'maven'   // Must match Jenkins Maven installation name
+    }
+
+    environment {
+        DEPLOY_DIR = "/opt/deploy/redis-demo"
     }
 
     stages {
 
-        stage('Clone Repository') {
+        stage("Clone Repository") {
             steps {
-                git branch: 'main', url: 'https://github.com/Ranjitha1024/springboot-redis-demo-sak.git'
+                dir(DEPLOY_DIR) {
+                    git branch: 'main', url: 'https://github.com/Ranjitha1024/springboot-redis-demo-sak.git'
+                }
             }
         }
 
-        stage('Build JAR') {
+        stage("Build JAR") {
             steps {
-                sh 'mvn clean package -DskipTests'
+                dir(DEPLOY_DIR) {
+                    sh "mvn clean package -DskipTests"
+                }
             }
         }
 
-        stage('Docker Compose Down') {
+        stage("Docker Compose Down") {
             steps {
-                sh 'docker-compose down || true'
+                dir(DEPLOY_DIR) {
+                    sh "docker-compose down || true"
+                }
             }
         }
 
-        stage('Build Docker Images') {
+        stage("Docker Build") {
             steps {
-                sh 'docker-compose build --no-cache'
+                dir(DEPLOY_DIR) {
+                    sh "docker-compose build --no-cache"
+                }
             }
         }
 
-        stage('Deploy Containers') {
+        stage("Docker Deploy") {
             steps {
-                sh 'docker-compose up -d'
+                dir(DEPLOY_DIR) {
+                    sh "docker-compose up -d"
+                }
             }
         }
     }
 
     post {
         success {
-            echo "Deployment Successful! Application is live at http://35.154.102.39:8084"
+            echo "Deployment Successful 🎉 App running at: http://65.2.171.164:8084"
         }
         failure {
-            echo "Deployment Failed!"
+            echo "Deployment Failed ❌ Please check console logs."
         }
     }
 }
