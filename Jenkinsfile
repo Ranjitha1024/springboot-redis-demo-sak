@@ -1,34 +1,49 @@
-version: "3.9"
+pipeline {
+    agent any
 
-networks:
-  sak-network:
-    driver: bridge
+    tools {
+        maven 'Maven'  // Make sure this matches the Maven installation name in Jenkins
+    }
 
-services:
-  redis:
-    image: redis:7-alpine
-    container_name: sak_redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    command: ["redis-server", "--appendonly", "yes"]
-    networks:
-      - sak-network
+    stages {
 
-  app:
-    build: .
-    image: sak_redis_app   # Your custom image name
-    container_name: sak_app
-    ports:
-      - "8084:8084"
-    environment:
-      - SPRING_REDIS_HOST=redis  # Connects to Redis container via network alias
-      - SPRING_REDIS_PORT=6379
-    depends_on:
-      - redis
-    networks:
-      - sak-network
+        stage('Clone Repository') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Ranjitha1024/springboot-redis-demo-sak.git'
+            }
+        }
 
-volumes:
-  redis-data:
+        stage('Build JAR') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('Docker Compose Down') {
+            steps {
+                sh 'docker-compose down || true'
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                sh 'docker-compose build --no-cache'
+            }
+        }
+
+        stage('Deploy Containers') {
+            steps {
+                sh 'docker-compose up -d'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment Successful! Application is live at http://35.154.102.39:8084"
+        }
+        failure {
+            echo "Deployment Failed!"
+        }
+    }
+}
