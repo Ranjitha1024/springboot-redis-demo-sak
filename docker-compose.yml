@@ -1,77 +1,41 @@
-pipeline {
-    agent any
+version: "3.9"
 
-    tools {
-        maven 'maven'   // Must match Jenkins Maven installation name
-    }
+networks:
+  sak-network:
+    driver: bridge
 
-    environment {
-        DEPLOY_DIR = "/opt/deploy/redis-demo"
-    }
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: sak_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sak-network
 
-    stages {
+  app:
+    build: .
+    image: sak_redis_app
+    container_name: sak_app
+    ports:
+      - "8084:8084"
+    environment:
+      - spring.redis.host=redis
+      - spring.redis.port=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - sak-network
+    restart: unless-stopped
 
-        stage("Clone Repository") {
-            steps {
-                dir(DEPLOY_DIR) {
-                    git branch: 'main', url: 'https://github.com/Ranjitha1024/springboot-redis-demo-sak.git'
-                }
-            }
-        }
-
-        stage("Prepare Build Directory") {
-            steps {
-                dir(DEPLOY_DIR) {
-                    sh """
-                    # Ensure Jenkins user owns the folder
-                    sudo chown -R jenkins:jenkins $DEPLOY_DIR
-                    sudo chmod -R 755 $DEPLOY_DIR
-                    # Clean previous build artifacts
-                    rm -rf target/*
-                    """
-                }
-            }
-        }
-
-        stage("Build JAR") {
-            steps {
-                dir(DEPLOY_DIR) {
-                    sh "mvn clean package -DskipTests"
-                }
-            }
-        }
-
-        stage("Docker Compose Down") {
-            steps {
-                dir(DEPLOY_DIR) {
-                    sh "docker-compose down || true"
-                }
-            }
-        }
-
-        stage("Docker Build") {
-            steps {
-                dir(DEPLOY_DIR) {
-                    sh "docker-compose build --no-cache"
-                }
-            }
-        }
-
-        stage("Docker Deploy") {
-            steps {
-                dir(DEPLOY_DIR) {
-                    sh "docker-compose up -d"
-                }
-            }
-        }
-    }
-
-    post {
-        success {
-            echo "Deployment Successful 🎉 App running at: http://65.2.171.164:8084"
-        }
-        failure {
-            echo "Deployment Failed ❌ Please check console logs."
-        }
-    }
-}
+volumes:
+  redis-data:
