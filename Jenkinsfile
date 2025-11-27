@@ -1,59 +1,34 @@
-pipeline {
-    agent any
+version: "3.9"
 
-    tools {
-       // jdk 'Java17'
-        maven 'maven'
-    }
+networks:
+  sak-network:
+    driver: bridge
 
-    stages {
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: sak_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    networks:
+      - sak-network
 
-        stage('Clone Repository') {
-            steps {
-                git branch: 'main', url: 'https://github.com/Ranjitha1024/springboot-redis-demo-sak.git'
-            }
-        }
+  app:
+    build: .
+    image: sak_redis_app   # Your custom image name
+    container_name: sak_app
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_REDIS_HOST=redis  # Connects to Redis container via network alias
+      - SPRING_REDIS_PORT=6379
+    depends_on:
+      - redis
+    networks:
+      - sak-network
 
-        stage('Build JAR') {
-            steps {
-                sh 'mvn clean package -DskipTests'
-            }
-        }
-
-        stage('Docker Compose Down') {
-            steps {
-                sh '''
-                echo "Stopping existing containers..."
-                docker-compose down || true
-                '''
-            }
-        }
-
-        stage('Build Docker Images') {
-            steps {
-                sh '''
-                echo "Building docker images..."
-                docker-compose build --no-cache
-                '''
-            }
-        }
-
-        stage('Deploy Containers') {
-            steps {
-                sh '''
-                echo "Starting application using Docker Compose..."
-                docker-compose up -d
-                '''
-            }
-        }
-    }
-
-    post {
-        success {
-            echo "Deployment Successful! Application is live at http://13.126.188.155:8084"
-        }
-        failure {
-            echo "Deployment Failed!"
-        }
-    }
-}
+volumes:
+  redis-data:
