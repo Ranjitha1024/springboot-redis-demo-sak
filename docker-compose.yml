@@ -13,29 +13,22 @@ services:
     volumes:
       - redis-data:/data
     command: ["redis-server", "--appendonly", "yes"]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - sak-network
 
   app:
     build: .
-    image: sak_redis_app
+    image: sak_redis_app   # Your custom image name
     container_name: sak_app
     ports:
       - "8084:8084"
     environment:
-      - spring.redis.host=redis
-      - spring.redis.port=6379
+      - SPRING_REDIS_HOST=redis  # Connects to Redis container via network alias
+      - SPRING_REDIS_PORT=6379
     depends_on:
-      redis:
-        condition: service_healthy
+      - redis
     networks:
       - sak-network
-    restart: unless-stopped
 
 volumes:
   redis-data:
