@@ -1,63 +1,66 @@
 pipeline {
     agent any
 
-    tools {
-        maven 'maven'   // Must match Jenkins Maven installation name
+    tools{
+        maven 'maven'
     }
 
     environment {
-        DEPLOY_DIR = "/opt/deploy/redis-demo"
+        COMPOSE_FILE = "docker-compose.yml"
+         DOCKERHUB_USERNAME = 'sareenakashi'
     }
 
     stages {
 
-        stage("Clone Repository") {
+        stage('Checkout') {
             steps {
-                dir(DEPLOY_DIR) {
-                    git branch: 'main', url: 'https://github.com/Ranjitha1024/springboot-redis-demo-sak.git'
-                }
+                git branch: 'main',
+                    url: 'https://github.com/srushtimk0318/springboot-redis-demo-sak.git'
             }
         }
 
-        stage("Build JAR") {
+        stage('Build JAR') {
             steps {
-                dir(DEPLOY_DIR) {
-                    sh "mvn clean package -DskipTests"
-                }
+                sh 'mvn clean package -DskipTests'
             }
         }
 
-        stage("Docker Compose Down") {
+        stage('Build Docker Image') {
             steps {
-                dir(DEPLOY_DIR) {
-                    sh "docker compose down || true"
-                }
+                sh """
+                docker build -t sak_redis_app .
+                """
             }
         }
 
-        stage("Docker Build") {
+        stage('Stop Old Containers') {
             steps {
-                dir(DEPLOY_DIR) {
-                    sh "docker compose build --no-cache"
-                }
+                sh """
+                if [ -f ${COMPOSE_FILE} ]; then
+                    docker-compose -f ${COMPOSE_FILE} down || true
+                fi
+                """
             }
         }
 
-        stage("Docker Deploy") {
+        stage('Start New Containers') {
             steps {
-                dir(DEPLOY_DIR) {
-                    sh "docker compose up -d"
-                }
+                sh """
+                docker-compose -f ${COMPOSE_FILE} up -d --build
+                """
             }
         }
     }
-
-    post {
+     post {
+        always {
+            echo "Pipeline completed."
+        }
         success {
-            echo "Deployment Successful 🎉 App running at: http://65.2.171.164:8084"
+            echo "Pipeline succeeded."
         }
         failure {
-            echo "Deployment Failed ❌ Please check console logs."
+            echo "Pipeline failed."
         }
     }
+
 }
