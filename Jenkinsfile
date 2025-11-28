@@ -21,6 +21,7 @@ pipeline {
 
         stage('Build JAR') {
             steps {
+                sh 'rm -rf target || true'
                 sh 'mvn clean package -DskipTests'
             }
         }
